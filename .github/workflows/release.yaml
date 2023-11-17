@@ -23,7 +23,7 @@ jobs:
         with:
           images: synopsia/whisperapi
           tags: |
-            type=raw,value=test
+            type=raw,value=${GITHUB_REF##*/}
 
       - name: Build and push
         uses: docker/build-push-action@v5
