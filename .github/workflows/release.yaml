@@ -1,6 +1,6 @@
 name: Publish Package to npmjs
 on:
-  pull-request:
+  pull_request:
 
 push-docker-image:
     needs: build
