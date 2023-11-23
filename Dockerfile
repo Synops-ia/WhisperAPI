@@ -1,7 +1,9 @@
-FROM python:3.12.0
+FROM pytorch/pytorch:2.1.1-cuda12.1-cudnn8-runtime
 
-COPY ./ ./
+WORKDIR /app
 
-RUN pip install --no-cache-dir --upgrade -r requirement.txt
+COPY . /app
 
-CMD [ "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload" ]
+RUN pip3 install --no-cache-dir --upgrade -r /app/requirements.txt
+
+CMD [ "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload" ]
