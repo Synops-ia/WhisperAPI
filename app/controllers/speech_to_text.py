@@ -6,5 +6,5 @@ router = APIRouter()
 @router.post("/speech-to-text/", tags=["speech-to-text"])
 async def speech_to_text(speech_file: UploadFile = File(...)):
     text = await speech_to_text_service(speech_file)
-
+    
     return {"transcription": text}

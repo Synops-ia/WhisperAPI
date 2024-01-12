@@ -1,5 +1,8 @@
 import torch
 from transformers import pipeline, AutoProcessor, WhisperForConditionalGeneration
+import json
+from starlette.responses import FileResponse
+
 
 
 async def speech_to_text(speech_file):
@@ -20,5 +23,9 @@ async def speech_to_text(speech_file):
     )
     speech = await speech_file.read()
     text = whisper_pipeline(speech)
+    file_path = "transcription.json"
+    with open("transcription.json", "w") as file:
+        json.dump({"transcription": text}, file)
 
-    return text
+    return file_path
+
