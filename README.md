@@ -2,7 +2,7 @@
 
 Build docker image:
 
-> docker build whisperapi .
+> docker build -t whisperapi .
 
 Run docker image:
 
