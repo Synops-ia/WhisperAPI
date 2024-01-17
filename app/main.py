@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 
-from .controllers import speech_to_text
+from .controllers import summaries
 
 app = FastAPI()
 
-app.include_router(speech_to_text.router)
+app.include_router(summaries.router, prefix="/api/v1")
+
