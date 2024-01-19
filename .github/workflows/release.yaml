@@ -31,4 +31,6 @@ jobs:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          labels: test
+          secret-envs: |
+            OPENAI_API_KEY=${{secrets.OPENAI_API_KEY}}
