@@ -1,7 +1,6 @@
 import redis
 from fastapi import FastAPI
-
-from .controllers import speech_to_text, cache
+from .controllers import speech_to_text, cache, summaries
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -25,3 +24,7 @@ app.add_middleware(
 
 app.include_router(speech_to_text.router)
 app.include_router(cache.router)
+
+app = FastAPI()
+
+app.include_router(summaries.router, prefix="/api/v1")
