@@ -7,5 +7,5 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=find_dotenv())
 
-settings = Settings()
 
+settings = Settings()
