@@ -1,8 +1,3 @@
-import json
-
-import redis
-from redis.commands.search.query import Query
-
 from app import redis_cache
 from app.models.cache import TranscriptModel
 
@@ -18,3 +13,12 @@ def get_transcripts():
 
 def get_transcript(transcript_id: str):
     return redis_cache.redis_client.json().get("transcript:{}".format(transcript_id))
+
+
+def get_summary(transcript_id: str):
+    return redis_cache.redis_client.json().get("summary:{}".format(transcript_id))
+
+
+def get_summaries():
+    for key in redis_cache.redis_client.keys("summary:*"):
+        yield {"summary_id": key, "summary": redis_cache.redis_client.json().get(key)}

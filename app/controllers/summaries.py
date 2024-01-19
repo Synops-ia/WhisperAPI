@@ -3,6 +3,7 @@ from ..services.summaries import add_summary as add_summary_service
 
 router = APIRouter()
 
+
 @router.post("/summaries", tags=["summaries"], status_code=200)
 async def add_summary(input_file: UploadFile = File(...)):
     try:
@@ -10,4 +11,3 @@ async def add_summary(input_file: UploadFile = File(...)):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"summary": summary}
-

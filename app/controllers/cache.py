@@ -1,13 +1,12 @@
 import uuid
-from typing import Dict, Any
-
 from fastapi import APIRouter
-from pydantic import BaseModel
 
 from ..models.cache import TranscriptModel
 from ..services.cache import get_transcript as get_transcript_service
 from ..services.cache import get_transcripts as get_transcripts_service
 from ..services.cache import add_transcript as add_transcript_service
+from ..services.cache import get_summary as get_summary_service
+from ..services.cache import get_summaries as get_summaries_service
 
 router = APIRouter()
 
@@ -25,3 +24,11 @@ def get_transcripts():
 @router.get("/transcripts/{transcript_id}", tags=["transcripts"])
 def get_transcript(transcript_id: str):
     return get_transcript_service(transcript_id)
+
+@router.get("/summaries/{transcript_id}", tags=["summaries"])
+def get_summary(transcript_id: str):
+    return get_summary_service(transcript_id)
+
+@router.get("/summaries/", tags=["summaries"])
+def get_summaries():
+    return get_summaries_service()
