@@ -31,6 +31,6 @@ except ResponseError:
     summary_redis_search.create_index(
         summary_schema,
         definition=IndexDefinition(
-            prefix=["transcript:"], index_type=IndexType.JSON
+            prefix=["summary:"], index_type=IndexType.JSON
         )
     )
