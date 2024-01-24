@@ -28,31 +28,29 @@ level = {
 }
 
 
-async def add_summary(input_file: SummaryRequest = Depends()):
-    audio_data: InputFile={}
-    audio_data.transcription = ""
-    audio_data.transcript_id = uuid4()
-    if input_file.content_type == "audio/mpeg":
-        speech = await input_file.read()
+async def add_summary(request_file: SummaryRequest = Depends()):
+    audio_data = InputFile(transcript_id=str(uuid4()), filename="", transcription="")
+    if request_file.input_file.content_type == "audio/mpeg":
+        speech = await request_file.input_file.read()
         audio_data.transcription = __transcribe(speech)
         redis_client.json().set("transcript:{}".format(audio_data.transcript_id), Path.root_path(), {
-            "fileName": input_file.filename,
+            "fileName": request_file.filename,
             "data": audio_data.transcription
         })
 
-    elif input_file.content_type == "text/plain":
-        audio_data.transcription = await input_file.input_file.read()
-        input_file.input_file = audio_data
+    elif request_file.input_file.content_type == "text/plain":
+        audio_data.transcription = await request_file.input_file.read()
+        request_file.input_file = audio_data
     
 
     else:
         raise ValueError("File must have content type audio/mpeg or text/plain")
     
 
-    summary = await __summarize(input_file.input_file.transcription, 
-                                filename=input_file.input_file.filename, 
-                                transcript_id=input_file.input_file.transcript_id,
-                                complexity_value= input_file.complexity
+    summary = await __summarize(request_file.input_file.transcription, 
+                                filename=request_file.input_file.filename, 
+                                transcript_id=request_file.input_file.transcript_id,
+                                complexity_value= request_file.complexity
                                 )
     return summary
 
