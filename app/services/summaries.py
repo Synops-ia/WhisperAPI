@@ -1,4 +1,4 @@
-from fastapi import File, UploadFile
+from fastapi import File, UploadFile, Depends
 import torch
 from redis.commands.json.path import Path
 from transformers import pipeline, AutoProcessor, WhisperForConditionalGeneration
@@ -6,25 +6,54 @@ from openai import AsyncOpenAI
 from ..config import settings
 from ..redis_cache import redis_client
 from uuid import uuid4, UUID
+from pydantic import BaseModel
+from typing import Union
 
 
-async def add_summary(input_file: UploadFile = File(...)):
-    transcription = ""
-    transcript_id = uuid4()
+class InputFile(BaseModel):
+    transcript_id: str
+    filename: str
+    transcription: str
+
+class SummaryRequest(BaseModel):
+    input_file: Union[InputFile, UploadFile]
+    complexity: str
+    locale: str
+
+level = {
+    "1": "You receive the transcription of an audio from a talk, conference, podcast or a text document. In both case, try to make a summarization with the most important information, be very concise, use some paragraphs but also bullet points.",
+    "2":"You receive the transcription of an audio from a talk, conference, podcast or a text document. In both case, try to make a summarization with the most important information, be a little bit concise, use some paragraphs but also bullet points.",
+    "3":"You receive the transcription of an audio from a talk, conference, podcast or a text document. In both case, try to make a summarization with the most important information, be wordy, use some paragraphs but also bullet points.",
+    "4":"You receive the transcription of an audio from a talk, conference, podcast or a text document. In both case, try to make a summarization with the most important information be very wordy, use some paragraphs but also bullet points, all details must be there."
+}
+
+
+async def add_summary(input_file: SummaryRequest = Depends()):
+    audio_data: InputFile={}
+    audio_data.transcription = ""
+    audio_data.transcript_id = uuid4()
     if input_file.content_type == "audio/mpeg":
         speech = await input_file.read()
-        transcription = __transcribe(speech)
-        redis_client.json().set("transcript:{}".format(transcript_id), Path.root_path(), {
+        audio_data.transcription = __transcribe(speech)
+        redis_client.json().set("transcript:{}".format(audio_data.transcript_id), Path.root_path(), {
             "fileName": input_file.filename,
-            "data": transcription
+            "data": audio_data.transcription
         })
 
     elif input_file.content_type == "text/plain":
-        transcription = input_file.read()
+        audio_data.transcription = await input_file.input_file.read()
+        input_file.input_file = audio_data
+    
+
     else:
         raise ValueError("File must have content type audio/mpeg or text/plain")
+    
 
-    summary = await __summarize(transcription, filename=input_file.filename, transcript_id=transcript_id)
+    summary = await __summarize(input_file.input_file.transcription, 
+                                filename=input_file.input_file.filename, 
+                                transcript_id=input_file.input_file.transcript_id,
+                                complexity_value= input_file.complexity
+                                )
     return summary
 
 
@@ -44,7 +73,7 @@ def __transcribe(speech):
     return transcription
 
 
-async def __summarize(transcription: str, filename: str = "", transcript_id: UUID = ""):
+async def __summarize(transcription: str, filename: str = "", transcript_id: UUID = "", complexity_value: str = "1"):
     client = AsyncOpenAI(
         api_key=settings.openai_api_key
     )
@@ -53,7 +82,7 @@ async def __summarize(transcription: str, filename: str = "", transcript_id: UUI
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system",
-             "content": "You receive the transcription of an audio from a talk, conference, podcast. Try to make a summarization with the most important information, use some paragraphs but also bullet points."},
+             "content": level[complexity_value]},
             {"role": "user", "content": transcription}
         ],
         max_tokens=1000
