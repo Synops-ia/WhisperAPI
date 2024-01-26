@@ -1,4 +1,4 @@
-from fastapi import File, UploadFile, Depends, Form
+from fastapi import File, UploadFile
 import torch
 from redis.commands.json.path import Path
 from transformers import pipeline, AutoProcessor, WhisperForConditionalGeneration
@@ -6,51 +6,46 @@ from openai import AsyncOpenAI
 from ..config import settings
 from ..redis_cache import redis_client
 from uuid import uuid4, UUID
-from .cache import get_transcript as cache_service
-
-
+from .cache import get_transcript
 
 level = {
-    "1": "You receive the transcription of an audio from a talk, conference, podcast or a text document. In both case, try to make a summarization with the most important information, be very concise, use some paragraphs but also bullet points en.",
-    "2":"You receive the transcription of an audio from a talk, conference, podcast or a text document. In both case, try to make a summarization with the most important information, be a little bit concise, use some paragraphs but also bullet points.",
-    "3":"You receive the transcription of an audio from a talk, conference, podcast or a text document. In both case, try to make a summarization with the most important information, be wordy, use some paragraphs but also bullet points.",
-    "4":"You receive the transcription of an audio from a talk, conference, podcast or a text document. In both case, try to make a summarization with the most important information be very wordy, use some paragraphs but also bullet points, all details must be there."
+    "1": "very concise",
+    "2": "little bit concise",
+    "3": "wordy, but with only the most important information,",
+    "4": "wordy and very detailed"
 }
 
 language = {
-    "en" : "anglais",
-    "fr" : "francais"
+    "en": "english",
+    "fr": "french"
 }
 
 
-async def add_summary(input_file : UploadFile = File(...)):
-    transcript_id=uuid4()
-    filename=""
-    transcription=""
+async def add_summary(input_file: UploadFile = File(...), complexity: str = "1", locale: str = "en") -> str:
+    transcription = ""
+    transcript_id = uuid4()
     if input_file.content_type == "audio/mpeg":
         speech = await input_file.read()
         transcription = __transcribe(speech)
         redis_client.json().set("transcript:{}".format(transcript_id), Path.root_path(), {
-            "fileName": filename,
+            "fileName": input_file.filename,
             "data": transcription
         })
 
     elif input_file.content_type == "text/plain":
-        transcription = await input_file.read()
-    
-
+        transcription = input_file.read()
     else:
         raise ValueError("File must have content type audio/mpeg or text/plain")
-    
 
-    summary = await __summarize(transcription, filename=input_file.filename, transcript_id=transcript_id)
+    summary = await __summarize(transcription, filename=input_file.filename, transcript_id=transcript_id,
+                                complexity=complexity, locale=locale)
     return summary
 
-async def retry_summary(transcript_id,complexity, locale):
-    transcription = cache_service.get_summary(transcript_id)
-    new_summary = await __summarize(transcription.data, transcription.fileName, transcript_id, complexity, locale)
-    return new_summary
 
+async def retry_summary(transcript_id, complexity, locale):
+    transcription = get_transcript(transcript_id)
+    new_summary = await __summarize(transcription["data"], transcription["fileName"], transcript_id, complexity, locale)
+    return new_summary
 
 
 def __transcribe(speech):
@@ -69,7 +64,8 @@ def __transcribe(speech):
     return transcription
 
 
-async def __summarize(transcription: str, filename: str = "", transcript_id: UUID = "", complexity: str = "1", locale: str="en"):
+async def __summarize(transcription: str, filename: str = "", transcript_id: UUID = "", complexity: str = "1",
+                      locale: str = "en"):
     client = AsyncOpenAI(
         api_key=settings.openai_api_key
     )
@@ -78,7 +74,12 @@ async def __summarize(transcription: str, filename: str = "", transcript_id: UUI
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system",
-                "content": f"{level[complexity]} en {language[locale]} "},
+             "content": f"you are a useful assistant that can generate a {level[complexity]} yet comprehensive summarization that "
+                        "distills crucial insights for quick comprehension. Utilize a combination of well-crafted "
+                        "paragraphs and bullet points to enhance visual hierarchy. you use titles when necessary to "
+                        "have a well organized summary. you always output in HTML : title's should be <h1> tags, subtitles h2, list will be <ol> and <li> tags (for these ones, you will have to overwrite the default styling classes with tailwind), you will put important information in bold (<b />, italic <i /> or underlined <u />. you can use tailwind classes to style the summary as necessary."
+                        f"you will also output in the following language: {language[locale]}"
+             },
             {"role": "user", "content": transcription}
         ],
         max_tokens=1000
