@@ -1,13 +1,22 @@
-from fastapi import APIRouter, HTTPException, File, UploadFile
-from ..services.summaries import SummaryRequest, add_summary as add_summary_service
+from fastapi import APIRouter, HTTPException, UploadFile, File
+from ..services.summaries import add_summary as add_summary_service, retry_summary as retry_summary_service
 
 router = APIRouter()
 
 
 @router.post("/summaries", tags=["summaries"], status_code=200)
-async def add_summary(request_file: SummaryRequest):
+async def add_summary(input_file: UploadFile = File(...)):
     try:
-        summary = await add_summary_service(request_file)
+        summary = await add_summary_service(input_file)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"summary": summary}
+
+
+@router.patch("/summaries/{transcript_id}", tags=["retry"], status_code=200)
+async def retry_summary(transcript_id, complexity="1", locale="en"):
+    try:
+        new_summary =  await retry_summary_service(transcript_id, complexity, locale)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"summary": new_summary}
