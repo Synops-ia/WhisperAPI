@@ -38,7 +38,7 @@ async def add_summary(input_file: UploadFile = File(...), complexity: str = "1",
         # So we set a shadow key that will be deleted after 24 hours
         # The shadow key will be used to get the value of the transcript
         redis_client.set("{}:{}".format(shadow_key, transcript_storage_id), "")
-        redis_client.expire("{}:{}".format(shadow_key, transcript_storage_id), 3)
+        redis_client.expire("{}:{}".format(shadow_key, transcript_storage_id), 86400)
 
     elif input_file.content_type == "text/plain":
         transcription = input_file.read()
@@ -108,6 +108,6 @@ async def __summarize(transcription: str, filename: str = "", transcript_id: UUI
     # So we set a shadow key that will be deleted after 24 hours
     # The shadow key will be used to get the value of the summary
     redis_client.set("{}:{}".format(shadow_key, summary_storage_id), "")
-    redis_client.expire("{}:{}".format(shadow_key, summary_storage_id), 20)
+    redis_client.expire("{}:{}".format(shadow_key, summary_storage_id), 86400)
 
     return summary
