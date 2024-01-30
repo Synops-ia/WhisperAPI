@@ -7,10 +7,12 @@ redis_client = redis.Redis(host='redis', port=6379, decode_responses=True)
 schema = (
     TextField("$.fileName", as_name="fileName"),
     TextField("$.data", as_name="data"),
+    TextField("$.in_process", as_name="in_process"),
 )
 summary_schema = (
     TextField("$.fileName", as_name="fileName"),
     TextField("$.data", as_name="data"),
+    TextField("$.in_process", as_name="in_process"),
 )
 redis_search = redis_client.ft("idx:transcripts")
 summary_redis_search = redis_client.ft("idx:summaries")

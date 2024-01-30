@@ -22,3 +22,5 @@ def get_summary(transcript_id: str):
 def get_summaries():
     for key in redis_cache.redis_client.keys("summary:*"):
         yield {"summary_id": key, "summary": redis_cache.redis_client.json().get(key)}
+
+

@@ -34,3 +34,7 @@ def get_summary(transcript_id: str):
 @router.get("/summaries/", tags=["summaries"])
 def get_summaries():
     return get_summaries_service()
+
+@router.get("/check/{transcript_id}", tags=["check"])
+def get_summary_status(transcript_id: str):
+    return get_summary_service(transcript_id)

@@ -6,7 +6,7 @@ from openai import AsyncOpenAI
 from ..config import settings
 from ..redis_cache import redis_client
 from uuid import uuid4, UUID
-from .cache import get_transcript
+from .cache import get_transcript, get_summary
 
 level = {
     "1": "very concise",
@@ -21,31 +21,42 @@ language = {
 }
 
 
-async def add_summary(input_file: UploadFile = File(...), complexity: str = "1", locale: str = "en") -> str:
+async def add_summary(input_file: UploadFile = File(...), complexity: str = "1", locale: str = "en", transcript_id: str="") -> str:
     transcription = ""
-    transcript_id = uuid4()
+    
     if input_file.content_type == "audio/mpeg":
         speech = await input_file.read()
         transcription = __transcribe(speech)
         redis_client.json().set("transcript:{}".format(transcript_id), Path.root_path(), {
             "fileName": input_file.filename,
-            "data": transcription
+            "data": transcription,
+            "in_process": "0"
         })
 
     elif input_file.content_type == "text/plain":
         transcription = input_file.read()
     else:
         raise ValueError("File must have content type audio/mpeg or text/plain")
-
-    summary = await __summarize(transcription, filename=input_file.filename, transcript_id=transcript_id,
+    
+    redis_client.json().set("summary:{}".format(transcript_id), Path.root_path(), {
+        "fileName": input_file.filename,
+        "data": transcription,
+        "in_process": "1"
+    })
+    await __summarize(transcription, filename=input_file.filename, transcript_id=transcript_id,
                                 complexity=complexity, locale=locale)
-    return summary
+    
 
 
 async def retry_summary(transcript_id, complexity, locale):
+    document = get_summary(transcript_id)
+    redis_client.json().set("transcript:{}".format(transcript_id), Path.root_path(), {
+            "fileName": document.filename,
+            "data": document.data,
+            "in_process": "1"
+    })
     transcription = get_transcript(transcript_id)
-    new_summary = await __summarize(transcription["data"], transcription["fileName"], transcript_id, complexity, locale)
-    return new_summary
+    await __summarize(transcription["data"], transcription["fileName"], transcript_id, complexity, locale)
 
 
 def __transcribe(speech):
@@ -87,6 +98,6 @@ async def __summarize(transcription: str, filename: str = "", transcript_id: UUI
     summary = chat_completion.choices[0].message.content
     redis_client.json().set("summary:{}".format(transcript_id), Path.root_path(), {
         "fileName": filename,
-        "data": summary
+        "data": summary,
+        "in_process": "0"
     })
-    return summary
