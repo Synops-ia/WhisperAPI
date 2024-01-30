@@ -1,6 +1,7 @@
 from fastapi import FastAPI
-from .controllers import cache, summaries
 from fastapi.middleware.cors import CORSMiddleware
+
+from .controllers import cache, summaries
 
 app = FastAPI()
 
@@ -10,7 +11,6 @@ origins = [
     "http://localhost:80",
     "https://www.synopsia.fr"
 ]
-
 
 app.add_middleware(
     CORSMiddleware,
