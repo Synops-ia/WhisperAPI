@@ -11,7 +11,6 @@ shadow_key = "shadowKey:"
 def expire_handler(message):
     try:
         key = message['data']
-        print(key)
         if shadow_key in key:
             key = key.replace(shadow_key, "")
 
