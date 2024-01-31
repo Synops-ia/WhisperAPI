@@ -25,6 +25,11 @@ async def add_summary(input_file: UploadFile = File(...), complexity: str = "1",
     transcription = ""
     transcript_id = uuid4()
     if input_file.content_type == "audio/mpeg":
+        redis_client.json().set("summary:{}".format(transcript_id), Path.root_path(), {
+            "fileName": input_file.filename,
+            "data": "",
+            "progress": "processing"
+        })
         speech = await input_file.read()
         transcription = __transcribe(speech)
         redis_client.json().set("transcript:{}".format(transcript_id), Path.root_path(), {
@@ -44,6 +49,11 @@ async def add_summary(input_file: UploadFile = File(...), complexity: str = "1",
 
 async def retry_summary(transcript_id, complexity, locale):
     transcription = get_transcript(transcript_id)
+    redis_client.json().set("summary:{}".format(transcript_id), Path.root_path(), {
+        "fileName": transcription["fileName"],
+        "data": "",
+        "progress": "processing"
+    })
     new_summary = await __summarize(transcription["data"], transcription["fileName"], transcript_id, complexity, locale)
     return new_summary
 
@@ -87,6 +97,7 @@ async def __summarize(transcription: str, filename: str = "", transcript_id: UUI
     summary = chat_completion.choices[0].message.content
     redis_client.json().set("summary:{}".format(transcript_id), Path.root_path(), {
         "fileName": filename,
-        "data": summary
+        "data": summary,
+        "progress": "finished",
     })
     return summary
