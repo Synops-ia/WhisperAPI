@@ -24,7 +24,7 @@ def expire_handler(message):
         print(e)
 
 
-redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+redis_client = redis.Redis(host='redis', port=6379, decode_responses=True)
 
 pub_sub = redis_client.pubsub()
 pub_sub.subscribe(**{'__keyevent@0__:expired': expire_handler})
