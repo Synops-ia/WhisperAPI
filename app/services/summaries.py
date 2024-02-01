@@ -3,6 +3,8 @@ import torch
 from redis.commands.json.path import Path
 from transformers import pipeline, AutoProcessor, WhisperForConditionalGeneration
 from openai import AsyncOpenAI
+
+from .translate import translate
 from ..config import settings
 from ..redis_cache import redis_client
 from uuid import uuid4, UUID
@@ -17,7 +19,9 @@ level = {
 
 language = {
     "en": "english",
-    "fr": "french"
+    "fr": "french",
+    "ja": "japanese",
+    "de": "deutsch"
 }
 
 shadow_key = "shadowKey"
@@ -101,17 +105,17 @@ async def __summarize(transcription: str, filename: str = "", transcript_id: UUI
                         "the default styling classes with tailwind), you will put important information in bold (<b "
                         "/>, italic <i /> or underlined <u />. you can use tailwind classes to style the summary as "
                         "necessary."
-                        f"you will also output in the following language: {language[locale]}"
              },
             {"role": "user", "content": transcription}
         ],
-        max_tokens=1000
+        max_tokens=2000
     )
     summary = chat_completion.choices[0].message.content
+    translation = await translate(summary, locale)
     summary_storage_id = "summary:{}".format(transcript_id)
     redis_client.json().set(summary_storage_id, Path.root_path(), {
         "fileName": filename,
-        "data": summary,
+        "data": translation["translatedText"],
         "progress": "finished",
     })
 
